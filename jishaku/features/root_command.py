@@ -31,13 +31,13 @@ class RootCommand(Feature):
         super().__init__(*args, **kwargs)
         self.jsk.hidden = True
 
-    @Feature.Command(name="aniflax", aliases=["ani"], invoke_without_command=True, ignore_extra=False)
+    @Feature.Command(name="jishaku", aliases=["jsk"], invoke_without_command=True, ignore_extra=False)
     async def jsk(self, ctx: ContextA):
         jishaku_version = package_version("jishaku").split("a")[0]
         discord_version = package_version("discord").split("a")[0]
 
         summary = [
-            f"Aniflax v{jishaku_version}, discord `{discord_version}`, `Python {sys.version.split()[0]}` on `{sys.platform}`",
+            f"Jishaku v{jishaku_version}, discord `{discord_version}`, `Python {sys.version.split()[0]}` on `{sys.platform}`",
             f"Process started at <t:{int(self.load_time.timestamp())}:R>, bot was ready at <t:{int(self.start_time.timestamp())}:R>.\n"
         ]
 
