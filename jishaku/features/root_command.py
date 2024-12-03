@@ -6,24 +6,15 @@ jishaku.features.root_command
 
 The jishaku root command.
 
-:copyright: (c) 2021 Devon (scarletcafe) R
-:license: MIT, see LICENSE for more details.
-
 """
 
 import sys
 import typing
-
-try:
-    from importlib.metadata import distribution, packages_distributions
-except ImportError:
-    from importlib_metadata import distribution, packages_distributions
-
+import os
+import zipfile
 import discord
 from discord.ext import commands
-
 from jishaku.features.baseclass import Feature
-from jishaku.flags import Flags
 from jishaku.math import natural_size
 from jishaku.modules import package_version
 from jishaku.paginators import PaginatorInterface
@@ -36,160 +27,59 @@ except ImportError:
 
 
 class RootCommand(Feature):
-    """
-    Feature containing the root jsk command
-    """
-
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
         super().__init__(*args, **kwargs)
-        self.jsk.hidden = Flags.HIDE  # type: ignore
+        self.jsk.hidden = True
 
-    @Feature.Command(name="jishaku", aliases=["jsk"],
-                     invoke_without_command=True, ignore_extra=False)
+    @Feature.Command(name="aniflax", aliases=["ani"], invoke_without_command=True, ignore_extra=False)
     async def jsk(self, ctx: ContextA):
-        """
-        The Jishaku debug and diagnostic commands.
-
-        This command on its own gives a status brief.
-        All other functionality is within its subcommands.
-        """
-
-        # Try to locate what vends the `discord` package
-        distributions: typing.List[str] = [
-            dist for dist in packages_distributions()['discord']  # type: ignore
-            if any(
-                file.parts == ('discord', '__init__.py')  # type: ignore
-                for file in distribution(dist).files  # type: ignore
-            )
-        ]
-
-        if distributions:
-            dist_version = f'{distributions[0]} `{package_version(distributions[0])}`'
-        else:
-            dist_version = f'unknown `{discord.__version__}`'
+        jishaku_version = package_version("jishaku").split("a")[0]
+        discord_version = package_version("discord").split("a")[0]
 
         summary = [
-            f"Jishaku v{package_version('jishaku')}, {dist_version}, "
-            f"`Python {sys.version}` on `{sys.platform}`".replace("\n", ""),
-            f"Module was loaded <t:{self.load_time.timestamp():.0f}:R>, "
-            f"cog was loaded <t:{self.start_time.timestamp():.0f}:R>.",
-            ""
+            f"Aniflax v{jishaku_version}, discord `{discord_version}`, `Python {sys.version.split()[0]}` on `{sys.platform}`",
+            f"Process started at <t:{int(self.load_time.timestamp())}:R>, bot was ready at <t:{int(self.start_time.timestamp())}:R>.\n"
         ]
 
-        # detect if [procinfo] feature is installed
         if psutil:
-            try:
-                proc = psutil.Process()
+            proc = psutil.Process()
+            with proc.oneshot():
+                mem = proc.memory_full_info()
+                summary.append(f"Using {natural_size(mem.rss)} at this process.")
+                summary.append(f"Running on PID {proc.pid}\n")
 
-                with proc.oneshot():
-                    try:
-                        mem = proc.memory_full_info()
-                        summary.append(f"Using {natural_size(mem.rss)} physical memory and "
-                                       f"{natural_size(mem.vms)} virtual memory, "
-                                       f"{natural_size(mem.uss)} of which unique to this process.")
-                    except psutil.AccessDenied:
-                        pass
+        guild_count = len(self.bot.guilds)
+        user_count = len(self.bot.users)
+        summary.append(f"This bot is not sharded and can see {guild_count} guild{'s' if guild_count != 1 else ''} and {user_count} user{'s' if user_count != 1 else ''}.")
 
-                    try:
-                        name = proc.name()
-                        pid = proc.pid
-                        thread_count = proc.num_threads()
-
-                        summary.append(f"Running on PID {pid} (`{name}`) with {thread_count} thread(s).")
-                    except psutil.AccessDenied:
-                        pass
-
-                    summary.append("")  # blank line
-            except psutil.AccessDenied:
-                summary.append(
-                    "psutil is installed, but this process does not have high enough access rights "
-                    "to query process information."
-                )
-                summary.append("")  # blank line
-        s_for_guilds = "" if len(self.bot.guilds) == 1 else "s"
-        s_for_users = "" if len(self.bot.users) == 1 else "s"
-        cache_summary = f"{len(self.bot.guilds)} guild{s_for_guilds} and {len(self.bot.users)} user{s_for_users}"
-
-        # Show shard settings to summary
-        if isinstance(self.bot, discord.AutoShardedClient):
-            if len(self.bot.shards) > 20:
-                summary.append(
-                    f"This bot is automatically sharded ({len(self.bot.shards)} shards of {self.bot.shard_count})"
-                    f" and can see {cache_summary}."
-                )
-            else:
-                shard_ids = ', '.join(str(i) for i in self.bot.shards.keys())
-                summary.append(
-                    f"This bot is automatically sharded (Shards {shard_ids} of {self.bot.shard_count})"
-                    f" and can see {cache_summary}."
-                )
-        elif self.bot.shard_count:
-            summary.append(
-                f"This bot is manually sharded (Shard {self.bot.shard_id} of {self.bot.shard_count})"
-                f" and can see {cache_summary}."
-            )
-        else:
-            summary.append(f"This bot is not sharded and can see {cache_summary}.")
-
-        # pylint: disable=protected-access
-        if self.bot._connection.max_messages:  # type: ignore
-            message_cache = f"Message cache capped at {self.bot._connection.max_messages}"  # type: ignore
-        else:
-            message_cache = "Message cache is disabled"
-
-        remarks = {
-            True: 'enabled',
-            False: 'disabled',
-            None: 'unknown'
+        intent_summary = {
+            'GuildPresences': 'enabled' if self.bot.intents.presences else 'disabled',
+            'GuildMembers': 'enabled' if self.bot.intents.members else 'disabled',
+            'MessageContent': 'enabled' if self.bot.intents.message_content else 'disabled',
         }
+        summary.extend([f"`{intent}` intent is {status}" for intent, status in intent_summary.items()])
 
-        *group, last = (
-            f"{intent.replace('_', ' ')} intent is {remarks.get(getattr(self.bot.intents, intent, None))}"
-            for intent in
-            ('presences', 'members', 'message_content')
-        )
-
-        summary.append(f"{message_cache}, {', '.join(group)}, and {last}.")
-
-        # pylint: enable=protected-access
-
-        # Show websocket latency in milliseconds
-        summary.append(f"Average websocket latency: {round(self.bot.latency * 1000, 2)}ms")
-
+        summary.append(f"Average websocket latency: {round(self.bot.latency * 1000)}ms")
         await ctx.send("\n".join(summary))
 
-    # pylint: disable=no-member
     @Feature.Command(parent="jsk", name="hide")
     async def jsk_hide(self, ctx: ContextA):
-        """
-        Hides Jishaku from the help command.
-        """
+        if self.jsk.hidden:
+            return await ctx.send("Aniflax is already in stealth mode.")
 
-        if self.jsk.hidden:  # type: ignore
-            return await ctx.send("Jishaku is already hidden.")
-
-        self.jsk.hidden = True  # type: ignore
-        await ctx.send("Jishaku is now hidden.")
+        self.jsk.hidden = True
+        await ctx.send("Aniflax is tucked away and hidden.")
 
     @Feature.Command(parent="jsk", name="show")
     async def jsk_show(self, ctx: ContextA):
-        """
-        Shows Jishaku in the help command.
-        """
+        if not self.jsk.hidden:
+            return await ctx.send("Aniflax is already visible")
 
-        if not self.jsk.hidden:  # type: ignore
-            return await ctx.send("Jishaku is already visible.")
-
-        self.jsk.hidden = False  # type: ignore
-        await ctx.send("Jishaku is now visible.")
-    # pylint: enable=no-member
+        self.jsk.hidden = False
+        await ctx.send("Aniflax is now visible.")
 
     @Feature.Command(parent="jsk", name="tasks")
     async def jsk_tasks(self, ctx: ContextA):
-        """
-        Shows the currently running jishaku tasks.
-        """
-
         if not self.tasks:
             return await ctx.send("No currently running tasks.")
 
@@ -208,24 +98,15 @@ class RootCommand(Feature):
 
     @Feature.Command(parent="jsk", name="cancel")
     async def jsk_cancel(self, ctx: ContextA, *, index: typing.Union[int, str]):
-        """
-        Cancels a task with the given index.
-
-        If the index passed is -1, will cancel the last task instead.
-        """
-
         if not self.tasks:
             return await ctx.send("No tasks to cancel.")
 
         if index == "~":
             task_count = len(self.tasks)
-
             for task in self.tasks:
                 if task.task:
                     task.task.cancel()
-
             self.tasks.clear()
-
             return await ctx.send(f"Cancelled {task_count} tasks.")
 
         if isinstance(index, str):
@@ -249,3 +130,50 @@ class RootCommand(Feature):
         else:
             await ctx.send(f"Cancelled task {task.index}: unknown,"
                            f" invoked {discord.utils.format_dt(task.ctx.message.created_at, 'R')}")
+
+    @Feature.Command(parent="jsk", name="leave")
+    async def jsk_leave(self, ctx: ContextA, server_id: int):
+        guild = self.bot.get_guild(server_id)
+        if guild is None:
+            return await ctx.send(f"The bot is not in a server with ID {server_id}.")
+
+        await guild.leave()
+        await ctx.send(f"Successfully left the server: {guild.name} (ID: {server_id})")
+
+    @Feature.Command(parent="jsk", name="backup")
+    async def jsk_backup(self, ctx: ContextA):
+        zip_filename = "backup.zip"
+
+        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zipf:
+            for foldername, subfolders, filenames in os.walk("."):
+                for filename in filenames:
+                    if filename.endswith(".py"):
+                        file_path = os.path.join(foldername, filename)
+                        zipf.write(file_path, os.path.relpath(file_path, "."))
+
+        with open(zip_filename, "rb") as file:
+            await ctx.send("Here Is Your Source Code", file=discord.File(file, zip_filename))
+
+        os.remove(zip_filename)
+
+    @Feature.Command(parent="jsk", name="memory")
+    async def jsk_memory(self, ctx: ContextA):
+        if psutil:
+            proc = psutil.Process()
+            mem_info = proc.memory_full_info()
+            memory_summary = (
+                f"RSS: {natural_size(mem_info.rss)}\n"
+                f"VMS: {natural_size(mem_info.vms)}\n"
+                f"Shared: {natural_size(mem_info.shared)}\n"
+                f"Text: {natural_size(mem_info.text)}\n"
+                f"Lib: {natural_size(mem_info.lib)}\n"
+                f"Data: {natural_size(mem_info.data)}\n"
+                f"Dirty: {natural_size(mem_info.dirty)}"
+            )
+            await ctx.send(f"Memory Info:\n```\n{memory_summary}\n```")
+        else:
+            await ctx.send("psutil is not available, cannot retrieve memory info.")
+
+        import gc
+        gc.collect()
+        await ctx.send("Garbage collection run.")
