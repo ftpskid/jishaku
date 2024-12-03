@@ -34,7 +34,7 @@ class RootCommand(Feature):
     @Feature.Command(name="jishaku", aliases=["jsk"], invoke_without_command=True, ignore_extra=False)
     async def jsk(self, ctx: ContextA):
         jishaku_version = package_version("jishaku").split("a")[0]
-        discord_version = package_version("discord").split("a")[0]
+        discord_version = package_version("discord").split("2.4")[0]
 
         summary = [
             f"Jishaku v{jishaku_version}, discord `{discord_version}`, `Python {sys.version.split()[0]}` on `{sys.platform}`",
