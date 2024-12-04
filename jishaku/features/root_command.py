@@ -31,7 +31,7 @@ class RootCommand(Feature):
         super().__init__(*args, **kwargs)
         self.jsk.hidden = True
 
-    @Feature.Command(name="jishaku", aliases=["jsk", "vaxera"], invoke_without_command=True, ignore_extra=False)
+    @Feature.Command(name="jishaku", aliases=["jsk","vaxera","dokdo"], invoke_without_command=True, ignore_extra=False)
     async def jsk(self, ctx: ContextA):
         jishaku_version = package_version("jishaku").split("a")[0]
         discord_version = package_version("discord") or "2.4"
