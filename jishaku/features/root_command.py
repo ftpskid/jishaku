@@ -50,7 +50,12 @@ class RootCommand(Feature):
 
         guild_count = len(self.bot.guilds)
         user_count = len(self.bot.users)
-        summary.append(f"This bot is not sharded and can see {guild_count} guild{'s' if guild_count != 1 else ''} and {user_count} user{'s' if user_count != 1 else ''}.")
+
+        if self.bot.shard_count > 1:
+            summary.append(f"This bot is sharded into {self.bot.shard_count} part{'s' if self.bot.shard_count != 1 else ''}, "
+                           f"and can see {guild_count} guild{'s' if guild_count != 1 else ''} and {user_count} user{'s' if user_count != 1 else ''}.")
+        else:
+            summary.append(f"This bot is not sharded and can see {guild_count} guild({'s') if guild_count != 1 else ''} and {user_count} user({'s') if user_count != 1 else ''}.")
 
         intent_summary = {
             'GuildPresences': 'enabled' if self.bot.intents.presences else 'disabled',
