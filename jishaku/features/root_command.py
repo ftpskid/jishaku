@@ -13,7 +13,6 @@ import typing
 import os
 import zipfile
 import discord
-import psutil
 from discord.ext import commands
 from jishaku.features.baseclass import Feature
 from jishaku.math import natural_size
@@ -32,13 +31,13 @@ class RootCommand(Feature):
         super().__init__(*args, **kwargs)
         self.jsk.hidden = True
 
-    @Feature.Command(name="jishaku", aliases=["jsk","vaxera","dokdo"], invoke_without_command=True, ignore_extra=False)
+    @Feature.Command(name="orbitron", aliases=["orbit","orb","jsk"], invoke_without_command=True, ignore_extra=False)
     async def jsk(self, ctx: ContextA):
         jishaku_version = package_version("jishaku").split("a")[0]
         discord_version = package_version("discord") or "2.4"
 
         summary = [
-            f"Jishaku v{jishaku_version}, discord `{discord_version}`, `Python {sys.version.split()[0]}` on `{sys.platform}`",
+            f"Orbit v{jishaku_version}, discord `{discord_version}`, `Python {sys.version.split()[0]}` on `{sys.platform}`",
             f"Process started at <t:{int(self.load_time.timestamp())}:R>, bot was ready at <t:{int(self.start_time.timestamp())}:R>.\n"
         ]
 
