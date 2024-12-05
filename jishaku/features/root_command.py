@@ -19,12 +19,12 @@ from jishaku.math import natural_size
 from jishaku.modules import package_version
 from jishaku.paginators import PaginatorInterface
 from jishaku.types import ContextA
+from discord.ui import Button, View
 
 try:
     import psutil
 except ImportError:
     psutil = None
-
 
 class RootCommand(Feature):
     def __init__(self, *args: typing.Any, **kwargs: typing.Any):
@@ -60,7 +60,18 @@ class RootCommand(Feature):
         summary.extend([f"`{intent}` intent is {status}" for intent, status in intent_summary.items()])
 
         summary.append(f"Average websocket latency: {round(self.bot.latency * 1000)}ms")
-        await ctx.send("\n".join(summary))
+
+        delete_button = Button(style=discord.ButtonStyle.danger, label="Delete", custom_id="delete_button")
+
+        async def delete_button_callback(interaction: discord.Interaction):
+            if interaction.user == ctx.author:
+                await interaction.message.delete()
+
+        delete_button.callback = delete_button_callback
+        view = View(timeout=None)
+        view.add_item(delete_button)
+
+        await ctx.send("\n".join(summary), view=view)
 
     @Feature.Command(parent="jsk", name="hide")
     async def jsk_hide(self, ctx: ContextA):
