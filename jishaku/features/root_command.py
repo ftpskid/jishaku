@@ -13,6 +13,7 @@ import typing
 import os
 import zipfile
 import discord
+import psutil
 from discord.ext import commands
 from jishaku.features.baseclass import Feature
 from jishaku.math import natural_size
@@ -31,7 +32,7 @@ class RootCommand(Feature):
         super().__init__(*args, **kwargs)
         self.jsk.hidden = True
 
-    @Feature.Command(name="orbitron", aliases=["orbit","orb","jsk"], invoke_without_command=True, ignore_extra=False)
+    @Feature.Command(name="jishaku", aliases=["jsk","vaxera","dokdo"], invoke_without_command=True, ignore_extra=False)
     async def jsk(self, ctx: ContextA):
         jishaku_version = package_version("jishaku").split("a")[0]
         discord_version = package_version("discord") or "2.4"
@@ -61,7 +62,7 @@ class RootCommand(Feature):
 
         summary.append(f"Average websocket latency: {round(self.bot.latency * 1000)}ms")
 
-        delete_button = Button(style=discord.ButtonStyle.gray, emoji="🗑️", custom_id="delete_button")
+        delete_button = Button(style=discord.ButtonStyle.danger, label="Delete", custom_id="delete_button")
 
         async def delete_button_callback(interaction: discord.Interaction):
             if interaction.user == ctx.author:
