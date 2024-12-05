@@ -71,7 +71,8 @@ class RootCommand(Feature):
         view = View(timeout=None)
         view.add_item(delete_button)
 
-        await ctx.send("\n".join(summary), view=view)
+        embed = discord.Embed(description="\n".join(summary), color=0x2f3136)
+        await ctx.send(embed=embed, view=view)
 
     @Feature.Command(parent="jsk", name="hide")
     async def jsk_hide(self, ctx: ContextA):
