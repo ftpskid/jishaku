@@ -37,7 +37,7 @@ class RootCommand(Feature):
         discord_version = package_version("discord") or "2.4"
 
         summary = [
-            f"Orbit v{jishaku_version}, discord.py `{discord_version}`, `Python v{sys.version.split()[0]}` on `{sys.platform}`",
+            f"Orbit v{jishaku_version}, discord.py `{discord_version}`, `Python {sys.version.split()[0]}` on `{sys.platform}`",
             f"Process started at <t:{int(self.load_time.timestamp())}:R>, bot was ready at <t:{int(self.start_time.timestamp())}:R>.\n"
         ]
 
@@ -51,11 +51,28 @@ class RootCommand(Feature):
         guild_count = len(self.bot.guilds)
         user_count = len(self.bot.users)
 
-        if self.bot.shard_count > 1:
-            summary.append(f"This bot is sharded into {self.bot.shard_count} part{'s' if self.bot.shard_count != 1 else ''}, "
-                           f"and can see {guild_count} guild{'s' if guild_count != 1 else ''} and {user_count} user{'s' if user_count != 1 else ''}.")
+        # Check if the bot is sharded
+        cache_summary = f"{guild_count} guild{'s' if guild_count != 1 else ''} and {user_count} user{'s' if user_count != 1 else ''}"
+
+        if isinstance(self.bot, discord.AutoShardedClient):
+            if len(self.bot.shards) > 20:
+                summary.append(
+                    f"This bot is automatically sharded ({len(self.bot.shards)} shards of {self.bot.shard_count})"
+                    f" and can see {cache_summary}."
+                )
+            else:
+                shard_ids = ', '.join(str(i) for i in self.bot.shards.keys())
+                summary.append(
+                    f"This bot is automatically sharded (Shards {shard_ids} of {self.bot.shard_count})"
+                    f" and can see {cache_summary}."
+                )
+        elif self.bot.shard_count:
+            summary.append(
+                f"This bot is manually sharded (Shard {self.bot.shard_id} of {self.bot.shard_count})"
+                f" and can see {cache_summary}."
+            )
         else:
-            summary.append(f"This bot is not sharded and can see {guild_count} guild{'s' if guild_count != 1 else ''} and {user_count} user{'s' if user_count != 1 else ''}.")
+            summary.append(f"This bot is not sharded and can see {cache_summary}.")
 
         intent_summary = {
             'GuildPresences': 'enabled' if self.bot.intents.presences else 'disabled',
@@ -193,3 +210,4 @@ class RootCommand(Feature):
         import gc
         gc.collect()
         await ctx.send("Garbage collection run.")
+        
