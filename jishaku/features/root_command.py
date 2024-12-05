@@ -37,7 +37,7 @@ class RootCommand(Feature):
         discord_version = package_version("discord") or "2.4"
 
         summary = [
-            f"Orbit v{jishaku_version}, discord `{discord_version}`, `Python {sys.version.split()[0]}` on `{sys.platform}`",
+            f"Orbit v{jishaku_version}, discord.py `{discord_version}`, `Python {sys.version.split()[0]}` on `{sys.platform}`",
             f"Process started at <t:{int(self.load_time.timestamp())}:R>, bot was ready at <t:{int(self.start_time.timestamp())}:R>.\n"
         ]
 
